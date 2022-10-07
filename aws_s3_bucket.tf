@@ -20,16 +20,17 @@ resource "aws_s3_bucket_acl" "bucket-acl" {
 }
 
 resource "aws_s3_bucket_policy" "bucket-policy" {
-  bucket = aws_s3_bucket.bucket.bucket
-  policy = var.s3_bucket_policy
+  bucket = aws_s3_bucket.bucket.id
+  policy = var.s3_bucket_policy != null ? var.s3_bucket_policy : data.aws_iam_policy_document.bucket-tls-policy-document.json
 }
 
 resource "aws_s3_bucket_versioning" "bucket-versioning" {
   bucket = one(aws_s3_bucket.bucket[*].bucket)
 
   versioning_configuration {
-    status     = lookup(var.versioning, "status", null)
-    mfa_delete = lookup(var.versioning, "mfa_delete", null)
+    # TODO: need to tighten this up
+    status     = lookup(var.versioning, "status", "Enabled")
+    mfa_delete = lookup(var.versioning, "mfa_delete", "Disabled")
   }
 }
 
@@ -43,6 +44,8 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "bucket_encrpytion
 }
 
 resource "aws_s3_bucket_cors_configuration" "bucket-cors" {
+  count = length(keys(var.cors_rule)) == 0 ? 0 : 1
+
   bucket = aws_s3_bucket.bucket.id
 
   cors_rule {
@@ -55,13 +58,16 @@ resource "aws_s3_bucket_cors_configuration" "bucket-cors" {
 }
 
 resource "aws_s3_bucket_logging" "bucket-logs" {
-  bucket = aws_s3_bucket.bucket.id
+  count = length(keys(var.logging)) == 0 ? 0 : 1
 
-  target_bucket = var.target_bucket
-  target_prefix = var.target_prefix
+  bucket        = aws_s3_bucket.bucket.id
+  target_bucket = var.logging["target_bucket"]
+  target_prefix = var.logging["target_prefix"]
 }
 
 resource "aws_s3_bucket_lifecycle_configuration" "bucket-lifecycle" {
+  count = length(keys(var.lifecycle_rule)) == 0 ? 0 : length(keys(var.lifecycle_rule))
+
   bucket = aws_s3_bucket.bucket.id
 
   dynamic "rule" {

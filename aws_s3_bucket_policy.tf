@@ -1,27 +1,30 @@
-resource "aws_s3_bucket_policy" "bucket_policy" {
-  depends_on = [aws_s3_bucket_public_access_block.bucket_access]
-  bucket     = aws_s3_bucket.bucket.id
-  policy     = <<POLICY
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Deny",
-      "Principal": "*",
-      "Action": "S3:*",
-      "Resource": [
-        "${aws_s3_bucket.bucket.arn}/*",
-        "${aws_s3_bucket.bucket.arn}"
-      ],
-      "Condition": {
-        "Bool": {
-          "aws:SecureTransport": "false"
-        }
-      }
+data "aws_iam_policy_document" "bucket-tls-policy-document" {
+
+  statement {
+    sid = "SecureTransport"
+
+    effect = "Deny"
+    principals {
+      type        = "AWS"
+      identifiers = ["*"]
     }
-  ]
-}
-POLICY
+    condition {
+      test     = "Bool"
+      variable = "aws:SecureTransport"
+      values   = ["false"]
+    }
 
-}
+    #condition {
+    #test = "NumericLessThan"
+    #variable = "s3:TlsVersion"
+    #values = [1.2]
+    #}
 
+    actions = ["*"]
+
+    resources = [
+      "${aws_s3_bucket.bucket.arn}/*",
+      aws_s3_bucket.bucket.arn
+    ]
+  }
+}
