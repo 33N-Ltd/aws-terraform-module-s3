@@ -1,25 +1,6 @@
 resource "aws_s3_bucket" "bucket" {
   bucket        = var.s3_bucket_name
-  policy        = var.s3_bucket_policy
-  acl           = var.s3_bucket_acl
   force_destroy = var.s3_bucket_force_destroy
-
-  dynamic "versioning" {
-    for_each = length(keys(var.versioning)) == 0 ? [] : [var.versioning]
-
-    content {
-      enabled    = lookup(versioning.value, "enabled", null)
-      mfa_delete = lookup(versioning.value, "mfa_delete", null)
-    }
-  }
-
-  server_side_encryption_configuration {
-    rule {
-      apply_server_side_encryption_by_default {
-        sse_algorithm = var.s3_sse_algorithm
-      }
-    }
-  }
 
   tags = merge(var.common_tags)
 
@@ -76,17 +57,6 @@ resource "aws_s3_bucket" "bucket" {
     }
   }
 
-  dynamic "cors_rule" {
-    for_each = var.cors_rule
-    content {
-      allowed_headers = lookup(cors_rule.value, "allowed_headers", [])
-      allowed_methods = lookup(cors_rule.value, "allowed_methods", [])
-      allowed_origins = lookup(cors_rule.value, "allowed_origins", [])
-      expose_headers = lookup(cors_rule.value, "expose_headers", null)
-      max_age_seconds = lookup(cors_rule.value, "max_age_seconds", null)
-    }
-  }
-
   dynamic "logging" {
     for_each = length(keys(var.logging)) == 0 ? [] : [var.logging]
     content {
@@ -106,3 +76,42 @@ resource "aws_s3_bucket_public_access_block" "bucket_access" {
   restrict_public_buckets = var.restrict_public_buckets
 }
 
+resource "aws_s3_bucket_acl" "bucket-acl" {
+  bucket = aws_s3_bucket.bucket.id
+  acl    = var.s3_bucket_acl
+}
+
+resource "aws_s3_bucket_policy" "bucket-policy" {
+  bucket = aws_s3_bucket.bucket.bucket
+  policy = var.s3_bucket_policy
+}
+
+resource "aws_s3_bucket_versioning" "bucket-versioning" {
+  bucket = one(aws_s3_bucket.bucket[*].bucket)
+
+  versioning_configuration {
+    status     = lookup(var.versioning, "status", null)
+    mfa_delete = lookup(var.versioning, "mfa_delete", null)
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "bucket_encrpytion" {
+  bucket = aws_s3_bucket.bucket.id
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = var.s3_sse_algorithm
+    }
+  }
+}
+
+resource "aws_s3_bucket_cors_configuration" "bucket" {
+  bucket = aws_s3_bucket.bucket.id
+
+  cors_rule {
+    allowed_headers = lookup(var.cors_rule, "allowed_headers", null)
+    allowed_methods = lookup(var.cors_rule, "allowed_methods", null)
+    allowed_origins = lookup(var.cors_rule, "allowed_origins", null)
+    expose_headers  = lookup(var.cors_rule, "expose_headers", null)
+    max_age_seconds = lookup(var.cors_rule, "max_age_seconds", null)
+  }
+}
