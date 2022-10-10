@@ -28,7 +28,6 @@ resource "aws_s3_bucket_versioning" "bucket-versioning" {
   bucket = aws_s3_bucket.bucket.id
 
   versioning_configuration {
-    # TODO: need to tighten this up
     status     = lookup(var.versioning, "enabled", false) ? "Enabled" : "Suspended"
     mfa_delete = lookup(var.versioning, "mfa_delete", false) ? "Enabled" : "Disabled"
   }
