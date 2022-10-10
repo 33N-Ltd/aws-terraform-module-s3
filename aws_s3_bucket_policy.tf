@@ -20,7 +20,7 @@ data "aws_iam_policy_document" "bucket-tls-policy-document" {
     #values = [1.2]
     #}
 
-    actions = ["*"]
+    actions = ["S3:*"]
 
     resources = [
       "${aws_s3_bucket.bucket.arn}/*",

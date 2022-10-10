@@ -21,16 +21,16 @@ resource "aws_s3_bucket_acl" "bucket-acl" {
 
 resource "aws_s3_bucket_policy" "bucket-policy" {
   bucket = aws_s3_bucket.bucket.id
-  policy = var.s3_bucket_policy != null ? var.s3_bucket_policy : data.aws_iam_policy_document.bucket-tls-policy-document.json
+  policy = var.s3_bucket_policy == null || var.s3_bucket_policy == "" ? data.aws_iam_policy_document.bucket-tls-policy-document.json : var.s3_bucket_policy
 }
 
 resource "aws_s3_bucket_versioning" "bucket-versioning" {
-  bucket = one(aws_s3_bucket.bucket[*].bucket)
+  bucket = aws_s3_bucket.bucket.id
 
   versioning_configuration {
     # TODO: need to tighten this up
-    status     = lookup(var.versioning, "status", "Enabled")
-    mfa_delete = lookup(var.versioning, "mfa_delete", "Disabled")
+    status     = lookup(var.versioning, "enabled", false) ? "Enabled" : "Suspended"
+    mfa_delete = lookup(var.versioning, "mfa_delete", false) ? "Enabled" : "Disabled"
   }
 }
 
@@ -66,7 +66,7 @@ resource "aws_s3_bucket_logging" "bucket-logs" {
 }
 
 resource "aws_s3_bucket_lifecycle_configuration" "bucket-lifecycle" {
-  count = length(keys(var.lifecycle_rule)) == 0 ? 0 : length(keys(var.lifecycle_rule))
+  count = length(var.lifecycle_rule) == 0 ? 0 : 1
 
   bucket = aws_s3_bucket.bucket.id
 
@@ -75,11 +75,16 @@ resource "aws_s3_bucket_lifecycle_configuration" "bucket-lifecycle" {
     for_each = var.lifecycle_rule
 
     content {
-      id                                     = lookup(rule.value, "id", null)
-      filter                                 = lookup(rule.value, "prefix", null)
-      tags                                   = lookup(rule.value, "tags", null)
-      abort_incomplete_multipart_upload_days = lookup(rule.value, "abort_incomplete_multipart_upload_days", null)
-      status                                 = rule.value.enabled ? "Enabled" : "Disabled"
+      id     = lookup(rule.value, "id", null)
+      status = rule.value.enabled ? "Enabled" : "Disabled"
+
+      filter {
+        prefix = lookup(rule.value, "prefix", null)
+      }
+
+      abort_incomplete_multipart_upload {
+        days_after_initiation = lookup(rule.value, "abort_incomplete_multipart_upload_days", null)
+      }
 
       # Max 1 block - expiration
       dynamic "expiration" {
@@ -108,7 +113,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "bucket-lifecycle" {
         for_each = length(keys(lookup(rule.value, "noncurrent_version_expiration", {}))) == 0 ? [] : [lookup(rule.value, "noncurrent_version_expiration", {})]
 
         content {
-          days = lookup(noncurrent_version_expiration.value, "days", null)
+          noncurrent_days = lookup(noncurrent_version_expiration.value, "days", null)
         }
       }
 
@@ -117,8 +122,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "bucket-lifecycle" {
         for_each = lookup(rule.value, "noncurrent_version_transition", [])
 
         content {
-          days          = lookup(noncurrent_version_transition.value, "days", null)
-          storage_class = noncurrent_version_transition.value.storage_class
+          noncurrent_days = lookup(noncurrent_version_transition.value, "days", null)
+          storage_class   = noncurrent_version_transition.value.storage_class
         }
       }
     }
