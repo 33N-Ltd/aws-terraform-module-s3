@@ -15,6 +15,8 @@ resource "aws_s3_bucket_public_access_block" "bucket_access" {
 }
 
 resource "aws_s3_bucket_acl" "bucket-acl" {
+  count = var.s3_bucket_acl == null || var.s3_bucket_acl == "" || var.s3_bucket_acl == "private" ? 1 : 0
+
   bucket = aws_s3_bucket.bucket.id
   acl    = var.s3_bucket_acl
 }
