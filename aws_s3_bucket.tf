@@ -14,7 +14,7 @@ resource "aws_s3_bucket_public_access_block" "bucket_access" {
   restrict_public_buckets = var.restrict_public_buckets
 }
 
-resource "aws_s3_bucket_ownership_controls" "example" {
+resource "aws_s3_bucket_ownership_controls" "bucket-ownership" {
   bucket = aws_s3_bucket.bucket.id
 
   rule {
