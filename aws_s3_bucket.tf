@@ -14,8 +14,16 @@ resource "aws_s3_bucket_public_access_block" "bucket_access" {
   restrict_public_buckets = var.restrict_public_buckets
 }
 
+resource "aws_s3_bucket_ownership_controls" "example" {
+  bucket = aws_s3_bucket.bucket.id
+
+  rule {
+    object_ownership = var.s3_bucket_ownership
+  }
+}
+
 resource "aws_s3_bucket_acl" "bucket-acl" {
-  count = var.s3_bucket_acl == null || var.s3_bucket_acl == "" || var.s3_bucket_acl == "private" ? 1 : 0
+  count = var.s3_bucket_ownership == "BucketOwnerEnforced" ? 0 : 1
 
   bucket = aws_s3_bucket.bucket.id
   acl    = var.s3_bucket_acl

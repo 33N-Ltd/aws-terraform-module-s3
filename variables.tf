@@ -17,6 +17,11 @@ variable "s3_bucket_name" {
   description = "Set the name for the S3 bucket"
 }
 
+variable "s3_bucket_ownership" {
+  description = "Sets ownership of objects uploaded to the bucket and to disable/enable ACLs."
+  default = "BucketOwnerEnforced"
+}
+
 variable "s3_bucket_policy" {
   description = "You can provide a custom bucket policy with this variable"
   default     = null
