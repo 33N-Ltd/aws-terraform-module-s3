@@ -31,7 +31,7 @@ resource "aws_s3_bucket_acl" "bucket-acl" {
 
 resource "aws_s3_bucket_policy" "bucket-policy" {
   bucket = aws_s3_bucket.bucket.id
-  policy = var.s3_bucket_policy == null || var.s3_bucket_policy == "" ? data.aws_iam_policy_document.bucket-tls-policy-document.json : var.s3_bucket_policy
+  policy = data.aws_iam_policy_document.bucket-tls-policy-document.json
 }
 
 resource "aws_s3_bucket_versioning" "bucket-versioning" {
